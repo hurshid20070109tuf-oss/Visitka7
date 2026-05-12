@@ -465,7 +465,7 @@
         <div class="card-wrapper">
             <div class="card" onclick="this.classList.toggle('flipped')">
                 <!-- Front Side -->
-                <div class="card-face card-front" id="cardToDownload">
+                <div class="card-face card-front" id="cardFront">
                     <div class="corner corner-tl"></div>
                     <div class="corner corner-tr"></div>
                     <div class="corner corner-bl"></div>
@@ -488,7 +488,7 @@
                 </div>
                 
                 <!-- Back Side -->
-                <div class="card-face card-back">
+                <div class="card-face card-back" id="cardBack">
                     <div class="corner corner-tl"></div>
                     <div class="corner corner-tr"></div>
                     <div class="corner corner-bl"></div>
@@ -550,38 +550,69 @@
 
         <!-- Кнопка скачивания -->
         <button id="downloadBtn" class="download-btn">
-            Сохранить как фото
+            Сохранить визитку
         </button>
     </div>
 
-    <!-- Скрипт для скачивания -->
+    <!-- Скрипт для скачивания обеих сторон -->
     <script>
-        document.getElementById('downloadBtn').addEventListener('click', function() {
-            const card = document.getElementById('cardToDownload');
+        document.getElementById('downloadBtn').addEventListener('click', function(e) {
+            e.stopPropagation(); // Предотвращаем переворот карточки при клике
             const btn = this;
-            
-            // Меняем текст на время загрузки
             const originalText = btn.innerText;
             btn.innerText = 'Сохранение...';
 
-            html2canvas(card, {
-                backgroundColor: '#0a0a0b', // Цвет фона под карточкой
-                scale: 3, // Улучшенное качество картинки
+            const front = document.getElementById('cardFront');
+            const back = document.getElementById('cardBack');
+
+            // 1. Создаем временный невидимый контейнер
+            const exportContainer = document.createElement('div');
+            exportContainer.style.position = 'fixed';
+            exportContainer.style.left = '-9999px'; // Прячем за экран
+            exportContainer.style.top = '-9999px';
+            exportContainer.style.display = 'flex';
+            exportContainer.style.flexDirection = 'column'; // Карточки будут друг под другом
+            exportContainer.style.gap = '30px'; // Расстояние между сторонами
+            exportContainer.style.padding = '30px'; // Отступы по краям
+            exportContainer.style.background = '#0a0a0b'; // Фон такой же как на сайте
+
+            // 2. Клонируем обе стороны
+            const cloneFront = front.cloneNode(true);
+            const cloneBack = back.cloneNode(true);
+
+            // 3. Убираем 3D трансформации у клонов и задаем фиксированные размеры для хорошего качества
+            [cloneFront, cloneBack].forEach(clone => {
+                clone.style.position = 'relative';
+                clone.style.transform = 'none'; // Убираем вращение
+                clone.style.backfaceVisibility = 'visible';
+                clone.style.width = '380px'; // Фиксированная ширина
+                clone.style.height = '520px'; // Фиксированная высота
+                exportContainer.appendChild(clone);
+            });
+
+            document.body.appendChild(exportContainer);
+
+            // 4. Делаем скриншот этого временного контейнера
+            html2canvas(exportContainer, {
+                backgroundColor: '#0a0a0b',
+                scale: 2, // Качество (2 = retina)
                 logging: false,
                 useCORS: true
             }).then(canvas => {
                 // Создаем ссылку для скачивания
                 const link = document.createElement('a');
-                link.download = 'Bizning_Gosht_Card.png';
+                link.download = 'Bizning_Gosht_Business_Card.png';
                 link.href = canvas.toDataURL('image/png');
                 link.click();
                 
-                // Возвращаем текст кнопке
+                // Возвращаем текст кнопке и удаляем временный контейнер
                 btn.innerText = originalText;
+                document.body.removeChild(exportContainer);
             }).catch(err => {
                 console.error("Ошибка при сохранении:", err);
                 btn.innerText = 'Ошибка сохранения';
                 setTimeout(() => btn.innerText = originalText, 2000);
+                document.body.removeChild(exportContainer);
             });
         });
     </script>
